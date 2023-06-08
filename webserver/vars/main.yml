@@ -1,0 +1,6 @@
+---
+# vars file for webserver
+root: testroot.crt
+key: testroot.key
+crt: testroot.crt
+bundle: bundle.crt

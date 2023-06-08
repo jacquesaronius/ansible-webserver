@@ -1,0 +1,56 @@
+---
+# tasks file for webserver
+- name: Create cert bundle
+  ansible.builtin.shell:
+    cmd: "cat {{ role_path }}/files/{{ crt }} {{ role_path }}/files/{{ root }} > {{ role_path }}/files/{{ bundle }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Run as root
+  block:
+    - name: Update APT cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install Nginx
+      ansible.builtin.apt: 
+        name: nginx
+        state: present
+
+    - name: Copy bundled cert
+      ansible.builtin.copy:
+        src: "{{ role_path }}/files/{{ bundle }}"
+        dest: "/etc/ssl/certs/{{ bundle }}"
+        owner: root
+        group: root
+        mode: 0644  
+
+    - name: Copy key
+      ansible.builtin.copy:
+        src: "{{ role_path }}/files/{{ key }}"
+        dest: "/etc/ssl/private/{{ key }}"
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Copy nginx config
+      ansible.builtin.template:
+        src: "{{ role_path }}/templates/default.j2"
+        dest: "/etc/nginx/sites-available/default"
+        owner: root
+        group: root
+        mode: 0644
+      
+    - name: Restart nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: restarted
+        daemon_reload: true
+  become: true
+
+- name: Delete bundle cert
+  ansible.builtin.file:
+    path: "{{ role_path }}/files/{{ bundle }}"
+    state: absent
+  delegate_to: localhost
+  run_once: true
